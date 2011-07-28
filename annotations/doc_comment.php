@@ -1,5 +1,7 @@
 <?php
 
+namespace AddendumPP;
+
 	if (!defined('T_NAMESPACE'))
 		define('T_NAMESPACE', 377);
 	
