@@ -150,7 +150,6 @@ class AnnotationsBuilder {
         $annotations = array();
         foreach ($data as $class => $parameters) {
             foreach ($parameters as $params) {
-                echo "Instantiating annotation - $class\n";
                 $annotation = $this->instantiateAnnotation($class, $params, $targetReflection);
                 if ($annotation !== false) {
                     $annotations[get_class($annotation)][] = $annotation;
