@@ -18,6 +18,7 @@ class Test2 extends AddendumPP\Annotation
 
 /**
  * @Test()
+ * @Ts:et()
  */
 class TestTarget
 {
