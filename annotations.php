@@ -20,6 +20,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
+ * @package AddendumPP
  */
 
 namespace AddendumPP;
@@ -31,11 +32,37 @@ use \ReflectionClass,
 
 require_once(dirname(__FILE__) . '/annotations/annotation_parser.php');
 
+/**
+ * Base class for all annotations
+ * 
+ * Provides constraint checking, and checks for circular references.
+ */
 class Annotation {
+    /**
+     * @var mixed Stores the un-named argument to the annotation
+     */
     public $value;
+    /**
+     * Stores a list of classes currently being instantiated, to
+     * be used to detect and error upon circular references
+     * 
+     * @var string[] Stack of class names being created
+     */
     private static $creationStack = array();
-    private $addendum;
+    /**
+     * The addendum object that this method belongs to
+     * 
+     * @var AddendumPP\AddendumPP
+     */
+    protected $addendum;
 
+    /**
+     * Constructs a new annotation
+     * 
+     * @param AddendumPP\AddendumPP $addendum The instance of addendum for this annotation
+     * @param array $data Parameters as an associative array of keys to values
+     * @param mixed $target The target to which the annotation is applied
+     */
     public final function __construct($addendum, $data = array(), $target = false) {
         $this->addendum = $addendum;
         $reflection = new ReflectionClass($this);
@@ -57,6 +84,11 @@ class Annotation {
         unset(self::$creationStack[$class]);
     }
 
+    /**
+     * Checks the constraint of the annotation's allowed targets
+     * 
+     * @param mixed $target The target that this annotation is applied to
+     */
     private function checkTargetConstraints($target) {
         $reflection = new ReflectionAnnotatedClass($this->addendum, $this);
         if ($reflection->hasAnnotation('Target')) {
@@ -80,6 +112,12 @@ class Annotation {
         }
     }
 
+    /**
+     * Creates a fully qualified name for the target, for caching purposes
+     * 
+     * @param mixed $target The target to be named
+     * @return string The fully qualified name of the target
+     */
     private function createName($target) {
         if ($target instanceof ReflectionMethod) {
             return $target->getDeclaringClass()->getName() . '::' . $target->getName();
@@ -90,13 +128,33 @@ class Annotation {
         }
     }
 
+    /**
+     * Checks any constraints of an annotation
+     * 
+     * Override this function to add additional constraints to an annotation
+     * 
+     * @param mixed $target The target that this annotation is applied to
+     */
     protected function checkConstraints($target) {
         
     }
 }
 
+/**
+ * A collection of utility methods, for dealing with annotations on a reflection
+ */
 class AnnotationsCollection {
+    /**
+     * The annotations in this collection
+     * 
+     * @var AddendumPP\Annotation[]
+     */
     private $annotations;
+    /**
+     * The addendum object that this method belongs to
+     * 
+     * @var AddendumPP\AddendumPP
+     */
     private $addendum;
 
     public function __construct($addendum, $annotations) {
@@ -104,16 +162,33 @@ class AnnotationsCollection {
         $this->annotations = $annotations;
     }
 
+    /**
+     * Checks whether this collection holds a given annotation
+     * 
+     * @param type $class Tag name for the annotation
+     * @return bool
+     */
     public function hasAnnotation($class) {
         $class = $this->addendum->resolveClassName($class);
         return isset($this->annotations[$class]);
     }
 
+    /**
+     * Returns one annotation, specified by the tag name
+     * 
+     * @param type $class Tag name for the annotation
+     * @return AddendumPP\Annotation 
+     */
     public function getAnnotation($class) {
         $class = $this->addendum->resolveClassName($class);
         return isset($this->annotations[$class]) ? end($this->annotations[$class]) : false;
     }
 
+    /**
+     * Returns all annotations, with a max of one per type
+     * 
+     * @return AddendumPP\Annotation[]
+     */
     public function getAnnotations() {
         $result = array();
         foreach ($this->annotations as $instances) {
@@ -122,8 +197,15 @@ class AnnotationsCollection {
         return $result;
     }
 
+    /**
+     * Returns all annotations, including multiple of the same type
+     * 
+     * @param string $restriction If specified, only annotations of this tag name will be returned
+     * @return AddendumPP\Annotation[] 
+     */
     public function getAllAnnotations($restriction = false) {
-        $restriction = $this->addendum->resolveClassName($restriction);
+        if($restriction !== false)
+            $restriction = $this->addendum->resolveClassName($restriction);
         $result = array();
         foreach ($this->annotations as $class => $instances) {
             if (!$restriction || $restriction == $class) {
@@ -134,6 +216,15 @@ class AnnotationsCollection {
     }
 }
 
+/**
+ * A meta-annotation to restrict which targets it's subject can be applied to
+ * 
+ * Possible values:
+ * "class"
+ * "method"
+ * "property"
+ * "nested"
+ */
 class Annotation_Target extends Annotation {
 }
 
@@ -198,7 +289,11 @@ class AnnotationsBuilder {
 }
 
 class ReflectionAnnotatedClass extends ReflectionClass {
-
+    /**
+     * Stores the annotations which target this class
+     * 
+     * @var AnnotationsCollection 
+     */
     private $annotations;
 
     public function __construct($addendum, $class) {
@@ -208,22 +303,48 @@ class ReflectionAnnotatedClass extends ReflectionClass {
         $this->annotations = $this->createAnnotationBuilder()->build($this);
     }
 
+    /**
+     * Checks whether this class is targetted by a type of annotation
+     * 
+     * @param string $class Tag name of the annotation
+     * @return bool
+     */
     public function hasAnnotation($class) {
         return $this->annotations->hasAnnotation($class);
     }
 
+    /**
+     * Returns one annotation, specified by the tag name
+     * 
+     * @param string $annotation Tag name of the annotation
+     * @return AddendumPP\Annotation
+     */
     public function getAnnotation($annotation) {
         return $this->annotations->getAnnotation($annotation);
     }
 
+    /**
+     * Returns all annotations, with a max of one per type
+     * 
+     * @return AddendumPP\Annotation[]
+     */
     public function getAnnotations() {
         return $this->annotations->getAnnotations();
     }
 
+    /**
+     * Returns all annotations, including multiple of the same type
+     * 
+     * @param string $restriction If specified, only annotations of this tag name will be returned
+     * @return AddendumPP\Annotation[]
+     */
     public function getAllAnnotations($restriction = false) {
         return $this->annotations->getAllAnnotations($restriction);
     }
 
+    /**
+     * @return AddendumPP\ReflectionAnnotatedMethod
+     */
     public function getConstructor() {
         return $this->createReflectionAnnotatedMethod(parent::getConstructor());
     }
@@ -365,15 +486,21 @@ class UnresolvedAnnotationException extends Exception {
     }
 }
 
-abstract class AddendumPP {
+/**
+ * Central class for AddendumPP
+ * 
+ * Provides the entry point for reflecting annotated objects, as well as
+ * caching for various related objects
+ */
+class AddendumPP {
     /**
      * @var bool Denotes whether the parser will use manual doc-comment parsing
      */
     protected $rawMode;
     /**
-     * @var AnnotationResolver The resolver which will be used by default
+     * @var AddendumPP\AnnotationsBuilder The builder which will be used by default
      */
-    protected $resolver;
+    protected $builder;
     /**
      * @var array List of class names that this addendum instance ignores
      */
@@ -382,6 +509,9 @@ abstract class AddendumPP {
      * @var array List of cached declared annotations
      */
     protected $annotations = false;
+    /**
+     * @var array List of cached mappings from annotation name to class
+     */
     protected $cachedMappings = array();
     
     public function __construct() {
@@ -390,6 +520,13 @@ abstract class AddendumPP {
     }
     
     // <editor-fold desc="Raw mode detection">
+    /**
+     * Retrieves the doc comment associated with a given reflection.
+     * Works regardless of whether PHP supports it or not.
+     * 
+     * @param Reflector $reflection The reflection on which to operate
+     * @return string The doc comment if it exists, otherwise FALSE
+     */
     public function getDocComment($reflection) {
         if ($this->checkRawDocCommentParsingNeeded()) {
             $docComment = new DocComment();
@@ -409,6 +546,11 @@ abstract class AddendumPP {
         return $this->rawMode;
     }
 
+    /**
+     * Enables or disables raw mode parsing of doc comments
+     * 
+     * @param bool $enabled
+     */
     public function setRawMode($enabled = true) {
         if ($enabled) {
             require_once(dirname(__FILE__) . '/annotations/doc_comment.php');
@@ -417,20 +559,38 @@ abstract class AddendumPP {
     }
     // </editor-fold>
     
+    /**
+     * Forces AddendumPP to ignore annotations of a given class.
+     * Accepts a variable amount of parameters, one per class
+     */
     public function ignore() {
         foreach (func_get_args() as $class) {
             $this->ignore[$class] = true;
         }
     }
 
+    /**
+     * Checks whether AddendumPP ignores annotations of a given class
+     * 
+     * @return bool
+     */
     public function ignores($class) {
         return isset($this->ignore[$class]);
     }
     
+    /**
+     * Empties the list of classes for AddendumPP to ignore
+     */
     public function resetIgnoredAnnotations() {
         $this->ignore = array();
     }
 
+    /**
+     * Returns a list of annotations known to this instance of AddendumPP
+     * Note: This list is cached on it's first retrieval
+     * 
+     * @return array
+     */
     public function getDeclaredAnnotations() {
         if (!$this->annotations) {
             $this->annotations = array();
@@ -443,10 +603,21 @@ abstract class AddendumPP {
         return $this->annotations;
     }
 
+    /**
+     * Returns the annotation builder used by this instance of AddendumPP
+     * 
+     * @return AddendumPP\AnnotationsBuilder
+     */
     public function getAnnotationBuilder() {
         return $this->builder;
     }
     
+    /**
+     * Resolves a tag name to a class.
+     * Override this function to provide your own annotation naming logic
+     * 
+     * @return string The class name of the annotation
+     */
     public function resolveClassName($className) {
         if (isset($this->cachedMappings[$className]))
             return $this->cachedMappings[$className];
@@ -477,9 +648,10 @@ abstract class AddendumPP {
     }
     
     /**
-     *
-     * @param type $class
-     * @return ReflectionAnnotatedClass Reflection of the class
+     * Reflects a class, including annotations
+     * 
+     * @param string $class Class to reflect
+     * @return ReflectionAnnotatedClass Annotated reflection of the class
      */
     public function reflect($class) {
         return new ReflectionAnnotatedClass($this, $class);
