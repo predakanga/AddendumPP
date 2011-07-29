@@ -365,45 +365,7 @@ class UnresolvedAnnotationException extends Exception {
     }
 }
 
-class AnnotationResolver {
-    protected $cachedMappings = array();
-    protected $addendum;
-    
-    public function __construct($addendum) {
-        $this->addendum = $addendum;
-    }
-    
-    public function match($className) {
-        if (isset($this->cachedMappings[$className]))
-            return $this->cachedMappings[$className];
-        $matching = array();
-        foreach ($this->addendum->getDeclaredAnnotations() as $declared) {
-            if ($declared == $className) {
-                $matching[] = $declared;
-            } else {
-                $pos = strrpos($declared, "_$className");
-                if ($pos !== false && ($pos + strlen($className) == strlen($declared) - 1)) {
-                    $matching[] = $declared;
-                }
-            }
-        }
-        $result = null;
-        switch (count($matching)) {
-            case 0:
-                $result = $className;
-                break;
-            case 1:
-                $result = $matching[0];
-                break;
-            default:
-                throw new UnmatchedAnnotationException($className);
-        }
-        $this->classnames[$className] = $result;
-        return $result;
-    }
-}
-
-abstract class AddendumPPBase {
+abstract class AddendumPP {
     /**
      * @var bool Denotes whether the parser will use manual doc-comment parsing
      */
@@ -420,6 +382,7 @@ abstract class AddendumPPBase {
      * @var array List of cached declared annotations
      */
     protected $annotations = false;
+    protected $cachedMappings = array();
     
     public function __construct() {
         $this->checkRawDocCommentParsingNeeded();
@@ -485,7 +448,32 @@ abstract class AddendumPPBase {
     }
     
     public function resolveClassName($className) {
-        return $this->resolver->match($className);
+        if (isset($this->cachedMappings[$className]))
+            return $this->cachedMappings[$className];
+        $matching = array();
+        foreach ($this->getDeclaredAnnotations() as $declared) {
+            if ($declared == $className) {
+                $matching[] = $declared;
+            } else {
+                $pos = strrpos($declared, "_$className");
+                if ($pos !== false && ($pos + strlen($className) == strlen($declared) - 1)) {
+                    $matching[] = $declared;
+                }
+            }
+        }
+        $result = null;
+        switch (count($matching)) {
+            case 0:
+                $result = $className;
+                break;
+            case 1:
+                $result = $matching[0];
+                break;
+            default:
+                throw new UnmatchedAnnotationException($className);
+        }
+        $this->classnames[$className] = $result;
+        return $result;
     }
     
     /**
@@ -495,14 +483,6 @@ abstract class AddendumPPBase {
      */
     public function reflect($class) {
         return new ReflectionAnnotatedClass($this, $class);
-    }
-}
-
-class AddendumPP extends AddendumPPBase {
-    public function __construct() {
-        parent::__construct();
-        
-        $this->resolver = new AnnotationResolver($this);
     }
 }
 

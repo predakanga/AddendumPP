@@ -45,10 +45,11 @@ class TestTarget
     }
 }
 
-class FancyResolver extends AddendumPP\AnnotationResolver
+class FancyAddendum extends AddendumPP\AddendumPP
 {
     private $namespaces = array();
-    public function match($className) {
+    
+    public function resolveClassName($className) {
         $namespace = "";
         $key = $className;
         if(strpos($className, ":") !== FALSE)
@@ -67,7 +68,7 @@ class FancyResolver extends AddendumPP\AnnotationResolver
         // If not, and there's no namespace, scan the declared annotation list
         if($namespace == "")
         {
-            foreach($this->addendum->getDeclaredAnnotations() as $annotation) {
+            foreach($this->getDeclaredAnnotations() as $annotation) {
                 if($annotation == $className) {
                     if(!isset($namespaces[""]))
                         $namespaces[""] = array();
@@ -80,8 +81,8 @@ class FancyResolver extends AddendumPP\AnnotationResolver
         // If we didn't find one, check for an aliased one
         // If there is a namespace, go through the list of annotations
         // and stack them into the cached array
-        foreach($this->addendum->getDeclaredAnnotations() as $annotation) {
-            $reflClass = $this->addendum->reflect($annotation);
+        foreach($this->getDeclaredAnnotations() as $annotation) {
+            $reflClass = $this->reflect($annotation);
             if($reflClass->hasAnnotation("AliasAnnotation")) {
                 $targetNamespace = "";
                 $targetAlias = $reflClass->getAnnotation("AliasAnnotation")->value;
@@ -96,15 +97,6 @@ class FancyResolver extends AddendumPP\AnnotationResolver
             }
         }
         throw new AddendumPP\UnresolvedAnnotationException($className);
-    }
-}
-
-class FancyAddendum extends AddendumPP\AddendumPP
-{
-    public function __construct()
-    {
-        parent::__construct();
-        $this->resolver = new FancyResolver($this);
     }
 }
 
