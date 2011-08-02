@@ -122,9 +122,9 @@ class Annotation {
      */
     private function createName($target) {
         if ($target instanceof ReflectionMethod) {
-            return $target->getDeclaringClass()->getName() . '::' . $target->getName();
+            return $target->getUnannotatedDeclaringClass()->getName() . '::' . $target->getName();
         } elseif ($target instanceof ReflectionProperty) {
-            return $target->getDeclaringClass()->getName() . '::$' . $target->getName();
+            return $target->getUnannotatedDeclaringClass()->getName() . '::$' . $target->getName();
         } else {
             return $target->getName();
         }
@@ -434,6 +434,10 @@ class ReflectionAnnotatedMethod extends ReflectionMethod {
     public function getAllAnnotations($restriction = false) {
         return $this->annotations->getAllAnnotations($restriction);
     }
+    
+    public function getUnannotatedDeclaringClass() {
+        return parent::getDeclaringClass();
+    }
 
     public function getDeclaringClass() {
         $class = parent::getDeclaringClass();
@@ -471,6 +475,10 @@ class ReflectionAnnotatedProperty extends ReflectionProperty {
 
     public function getAllAnnotations($restriction = false) {
         return $this->annotations->getAllAnnotations($restriction);
+    }
+    
+    public function getUnannotatedDeclaringClass() {
+        return parent::getDeclaringClass();
     }
 
     public function getDeclaringClass() {
