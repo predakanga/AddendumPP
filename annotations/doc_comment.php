@@ -19,11 +19,11 @@ namespace AddendumPP;
 		}
 		
 		public function get($reflection) {
-			if($reflection instanceof ReflectionClass) {
+			if(is_a($reflection, "ReflectionClass")) {
 				return $this->forClass($reflection);
-			} elseif($reflection instanceof ReflectionMethod) {
+			} elseif(is_a($reflection, "ReflectionMethod")) {
 				return $this->forMethod($reflection);
-			} elseif($reflection instanceof ReflectionProperty) {
+			} elseif(is_a($reflection, "ReflectionProperty")) {
 				return $this->forProperty($reflection);
 			}
 		}
