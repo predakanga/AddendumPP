@@ -113,8 +113,14 @@ namespace AddendumPP;
 		}
 	}
 	
+        /*
+         * HACKHACKHACK: Use a local stack to manage the current addendum instance
+         */
+        $addendumStack = array();
 	class AnnotationsMatcher {
-		public function matches($string, &$annotations) {
+		public function matches($addendum, $string, &$annotations) {
+                        global $addendumStack;
+                        $addendumStack[] = $addendum;
 			$annotations = array();
 			$annotation_matcher = new AnnotationMatcher;
 			while(true) {
@@ -130,6 +136,7 @@ namespace AddendumPP;
 					$annotations[$name][] = $params;
 				}
 			}
+                        array_pop($addendumStack);
 		}
 	}
 	
@@ -357,7 +364,8 @@ namespace AddendumPP;
 
 	class NestedAnnotationMatcher extends AnnotationMatcher {
 		protected function process($result) {
-			$builder = new AnnotationsBuilder;
+                        global $addendumStack;
+			$builder = new AnnotationsBuilder(end($addendumStack));
 			return $builder->instantiateAnnotation($result[1], $result[2]);
 		}
 	}	

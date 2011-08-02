@@ -266,7 +266,7 @@ class AnnotationsBuilder {
         $key = $this->createName($reflection);
         if (!isset($this->cache[$key])) {
             $parser = new AnnotationsMatcher;
-            $parser->matches($this->getDocComment($reflection), $data);
+            $parser->matches($this->addendum, $this->getDocComment($reflection), $data);
             $this->cache[$key] = $data;
         }
         return $this->cache[$key];
