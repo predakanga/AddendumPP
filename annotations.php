@@ -95,6 +95,8 @@ class Annotation {
             $value = $reflection->getAnnotation('Target')->value;
             $values = is_array($value) ? $value : array($value);
             foreach ($values as $value) {
+                if ($value == 'meta' && $target instanceof ReflectionClass && $target->isSubclassOf("AddendumPP\Annotation"))
+                    return;
                 if ($value == 'class' && $target instanceof ReflectionClass)
                     return;
                 if ($value == 'method' && $target instanceof ReflectionMethod)
@@ -223,6 +225,7 @@ class AnnotationsCollection {
  * "class"
  * "method"
  * "property"
+ * "meta"
  * "nested"
  */
 class Annotation_Target extends Annotation {
