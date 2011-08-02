@@ -43,13 +43,6 @@ class Annotation {
      */
     public $value;
     /**
-     * Stores a list of classes currently being instantiated, to
-     * be used to detect and error upon circular references
-     * 
-     * @var string[] Stack of class names being created
-     */
-    private static $creationStack = array();
-    /**
      * The addendum object that this method belongs to
      * 
      * @var AddendumPP\AddendumPP
@@ -67,11 +60,11 @@ class Annotation {
         $this->addendum = $addendum;
         $reflection = new ReflectionClass($this);
         $class = $reflection->getName();
-        if (isset(self::$creationStack[$class])) {
+        if (isset($this->addendum->creationStack[$class])) {
             trigger_error("Circular annotation reference on '$class'", E_USER_ERROR);
             return;
         }
-        self::$creationStack[$class] = true;
+        $this->addendum->creationStack[$class] = true;
         foreach ($data as $key => $value) {
             if ($reflection->hasProperty($key)) {
                 $this->$key = $value;
@@ -81,7 +74,7 @@ class Annotation {
         }
         $this->checkTargetConstraints($target);
         $this->checkConstraints($target);
-        unset(self::$creationStack[$class]);
+        unset($this->addendum->creationStack[$class]);
     }
 
     /**
@@ -524,6 +517,13 @@ class AddendumPP {
      * @var array List of cached mappings from annotation name to class
      */
     protected $cachedMappings = array();
+    /**
+     * Stores a list of classes currently being instantiated, to
+     * be used to detect and error upon circular references
+     * 
+     * @var string[] Stack of class names being created
+     */
+    public static $creationStack = array();
     
     public function __construct() {
         $this->checkRawDocCommentParsingNeeded();
