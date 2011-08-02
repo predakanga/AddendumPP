@@ -31,6 +31,7 @@ use \ReflectionClass,
     \Exception;
 
 require_once(dirname(__FILE__) . '/annotations/annotation_parser.php');
+require_once(dirname(__FILE__) . '/annotation_exceptions.php');
 
 /**
  * Base class for all annotations
@@ -61,15 +62,14 @@ class Annotation {
         $reflection = new ReflectionClass($this);
         $class = $reflection->getName();
         if (isset($this->addendum->creationStack[$class])) {
-            trigger_error("Circular annotation reference on '$class'", E_USER_ERROR);
-            return;
+            throw new CircularAnnotationReferenceException($class);
         }
         $this->addendum->creationStack[$class] = true;
         foreach ($data as $key => $value) {
             if ($reflection->hasProperty($key)) {
                 $this->$key = $value;
             } else {
-                trigger_error("Property '$key' not defined for annotation '$class'");
+                throw new InvalidPropertyException($class, $key);
             }
         }
         $this->checkTargetConstraints($target);
@@ -100,9 +100,9 @@ class Annotation {
                     return;
             }
             if ($target === false) {
-                trigger_error("Annotation '" . get_class($this) . "' nesting not allowed", E_USER_ERROR);
+                throw new NoNestingAllowedException(get_class($this));
             } else {
-                trigger_error("Annotation '" . get_class($this) . "' not allowed on " . $this->createName($target), E_USER_ERROR);
+                throw new NestingNotAllowedException(get_class($this), $this->createName($target));
             }
         }
     }
@@ -481,12 +481,6 @@ class ReflectionAnnotatedProperty extends ReflectionProperty {
 
     protected function createAnnotationBuilder() {
         return $this->addendum->getAnnotationBuilder();
-    }
-}
-
-class UnresolvedAnnotationException extends Exception {
-    public function __construct($annotationName) {
-        parent::__construct("Unresolved annotation encountered: @" . $annotationName);
     }
 }
 
