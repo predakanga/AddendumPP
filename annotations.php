@@ -517,7 +517,7 @@ class AddendumPP {
      * 
      * @var string[] Stack of class names being created
      */
-    public static $creationStack = array();
+    public $creationStack = array();
     
     public function __construct() {
         $this->checkRawDocCommentParsingNeeded();
