@@ -1,18 +1,14 @@
 <?php
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 
 require_once("PHPUnit/Autoload.php");
 require_once(dirname(__FILE__)."/../annotations.php");
 require_once(dirname(__FILE__)."/fixtures/TargetFixture.php");
 
 /**
- * Description of TargetTest
+ * Tests the functionality of the Target annotation
  *
  * @author predakanga
- * @since x.y
+ * @since 0.1
  */
 class TargetTest extends PHPUnit_Framework_TestCase {
     /**

@@ -1,19 +1,14 @@
 <?php
 
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
 require_once("PHPUnit/Autoload.php");
 require_once(dirname(__FILE__)."/../annotations.php");
 require_once(dirname(__FILE__)."/fixtures/AddendumFixture.php");
 
 /**
- * Description of AddendumTest.php
+ * Tests the functionality of the Addendum core (i.e. doccomments and ignores)
  *
  * @author predakanga
- * @since x.y
+ * @since 0.1
  */
 class AddendumTest extends PHPUnit_Framework_TestCase {
     /**
