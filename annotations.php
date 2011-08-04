@@ -224,6 +224,9 @@ class AnnotationsCollection {
 class Annotation_Target extends Annotation {
 }
 
+/**
+ * Parses and instantiates annotation data
+ */
 class AnnotationsBuilder {
     private $cache = array();
     private $addendum;
@@ -232,6 +235,12 @@ class AnnotationsBuilder {
         $this->addendum = $addendum;
     }
 
+    /**
+     * Given a reflection of an object, collects and returns all the annotations that are applied to it
+     * 
+     * @param Reflector $targetReflection Reflection of the object to scan for annotations
+     * @return AnnotationsCollection
+     */
     public function build($targetReflection) {
         $data = $this->parse($targetReflection);
         $annotations = array();
@@ -246,6 +255,14 @@ class AnnotationsBuilder {
         return new AnnotationsCollection($this->addendum, $annotations);
     }
 
+    /**
+     * Instantiates an annotation
+     * 
+     * @param string $class The name of the annotation to instantiate
+     * @param array $parameters Array of the parameters for the annotation's constructor
+     * @param Reflector $targetReflection The object that the annotation targets
+     * @return AddendumPP\Annotation
+     */
     public function instantiateAnnotation($class, $parameters, $targetReflection = false) {
         $class = $this->addendum->resolveClassName($class);
         if (is_subclass_of($class, 'AddendumPP\\Annotation') && !$this->addendum->ignores($class) || $class == 'AddendumPP\\Annotation') {
@@ -274,16 +291,24 @@ class AnnotationsBuilder {
             return $target->getName();
         }
     }
-
+    
     protected function getDocComment($reflection) {
         return $this->addendum->getDocComment($reflection);
     }
 
+    /**
+     * Clears the cache of annotations-per-reflection
+     */
     public function clearCache() {
         $this->cache = array();
     }
 }
 
+/**
+ * Reflection of a class, with associated annotations
+ * 
+ * @see ReflectionClass
+ */
 class ReflectionAnnotatedClass extends ReflectionClass {
     /**
      * Stores the annotations which target this class
@@ -291,7 +316,20 @@ class ReflectionAnnotatedClass extends ReflectionClass {
      * @var AnnotationsCollection 
      */
     private $annotations;
+    
+    /**
+     * The AddendumPP object
+     * 
+     * @var AddendumPP\AddendumPP
+     */
+    private $addendum;
 
+    /**
+     * @see ReflectionClass::__construct
+     * 
+     * @param AddendumPP\AddendumPP $addendum
+     * @param mixed $class 
+     */
     public function __construct($addendum, $class) {
         parent::__construct($class);
 
@@ -339,16 +377,28 @@ class ReflectionAnnotatedClass extends ReflectionClass {
     }
 
     /**
+     * @see ReflectionClass::getConstructor
+     * 
      * @return AddendumPP\ReflectionAnnotatedMethod
      */
     public function getConstructor() {
         return $this->createReflectionAnnotatedMethod(parent::getConstructor());
     }
 
+    /**
+     * @see ReflectionClass::getMethod
+     * 
+     * @return AddendumPP\ReflectionAnnotatedMethod
+     */
     public function getMethod($name) {
         return $this->createReflectionAnnotatedMethod(parent::getMethod($name));
     }
 
+    /**
+     * @see ReflectionClass::getMethods
+     * @param string $filter Flags with which to filter
+     * @return AddendumPP\ReflectionAnnotatedMethod[] 
+     */
     public function getMethods($filter = -1) {
         $result = array();
         foreach (parent::getMethods($filter) as $method) {
@@ -357,10 +407,20 @@ class ReflectionAnnotatedClass extends ReflectionClass {
         return $result;
     }
 
+    /**
+     * @see ReflectionClass::getProperty
+     * @param string $name Property name
+     * @return AddendumPP\ReflectionAnnotatedProperty 
+     */
     public function getProperty($name) {
         return $this->createReflectionAnnotatedProperty(parent::getProperty($name));
     }
 
+    /**
+     * @see ReflectionClass::getProperties
+     * @param string $filter Flags with which to filter
+     * @return AddendumPP\ReflectionAnnotatedProperty[]
+     */
     public function getProperties($filter = -1) {
         $result = array();
         foreach (parent::getProperties($filter) as $property) {
@@ -369,6 +429,10 @@ class ReflectionAnnotatedClass extends ReflectionClass {
         return $result;
     }
 
+    /**
+     * @see ReflectionClass::getInterfaces
+     * @return ReflectionInterface
+     */
     public function getInterfaces() {
         $result = array();
         foreach (parent::getInterfaces() as $interface) {
@@ -377,6 +441,10 @@ class ReflectionAnnotatedClass extends ReflectionClass {
         return $result;
     }
 
+    /**
+     * @see ReflectionClass::getParentClass
+     * @return AddendumPP\ReflectionAnnotatedClass
+     */
     public function getParentClass() {
         $class = parent::getParentClass();
         return $this->createReflectionAnnotatedClass($class);
@@ -400,11 +468,33 @@ class ReflectionAnnotatedClass extends ReflectionClass {
 
 }
 
+/**
+ * Reflection of a method, with associated annotations
+ * 
+ * @see ReflectionMethod
+ */
 class ReflectionAnnotatedMethod extends ReflectionMethod {
-
+    /**
+     * Stores the annotations which target this class
+     * 
+     * @var AnnotationsCollection 
+     */
     private $annotations;
+    
+    /**
+     * The AddendumPP object
+     * 
+     * @var AddendumPP\AddendumPP
+     */
     private $addendum;
 
+    /**
+     * @see ReflectionMethod::__construct
+     * 
+     * @param AddendumPP\AddendumPP $addendum
+     * @param mixed $class
+     * @param string $name 
+     */
     public function __construct($addendum, $class, $name) {
         parent::__construct($class, $name);
 
@@ -412,26 +502,62 @@ class ReflectionAnnotatedMethod extends ReflectionMethod {
         $this->annotations = $this->createAnnotationBuilder()->build($this);
     }
 
+    /**
+     * Checks whether this method is targetted by a type of annotation
+     * 
+     * @param string $class Tag name of the annotation
+     * @return bool
+     */
     public function hasAnnotation($class) {
         return $this->annotations->hasAnnotation($class);
     }
 
+    /**
+     * Returns all annotations, with a max of one per type
+     * 
+     * @return AddendumPP\Annotation[]
+     */
     public function getAnnotation($annotation) {
         return $this->annotations->getAnnotation($annotation);
     }
 
+    /**
+     * Returns all annotations, with a max of one per type
+     * 
+     * @return AddendumPP\Annotation[]
+     */
     public function getAnnotations() {
         return $this->annotations->getAnnotations();
     }
 
+    /**
+     * Returns all annotations, including multiple of the same type
+     * 
+     * @param string $restriction If specified, only annotations of this tag name will be returned
+     * @return AddendumPP\Annotation[]
+     */
     public function getAllAnnotations($restriction = false) {
         return $this->annotations->getAllAnnotations($restriction);
     }
     
+    /**
+     * Returns a reflection of the declaring class
+     * 
+     * @see ReflectionMethod::getDeclaringClass
+     * 
+     * @return ReflectionClass
+     */
     public function getUnannotatedDeclaringClass() {
         return parent::getDeclaringClass();
     }
 
+    /**
+     * Returns a reflection of the declaring class, with annotations
+     * 
+     * @see ReflectionMethod::getDeclaringClass
+     * 
+     * @return AddendumPP\ReflectionAnnotatedClass
+     */
     public function getDeclaringClass() {
         $class = parent::getDeclaringClass();
         return new ReflectionAnnotatedClass($this->addendum, $class->getName());
@@ -443,10 +569,33 @@ class ReflectionAnnotatedMethod extends ReflectionMethod {
 
 }
 
+/**
+ * Reflection of a property, with associated annotations
+ * 
+ * @see ReflectionProperty
+ */
 class ReflectionAnnotatedProperty extends ReflectionProperty {
+    /**
+     * Stores the annotations which target this class
+     * 
+     * @var AnnotationsCollection 
+     */
     private $annotations;
+    
+    /**
+     * The AddendumPP object
+     * 
+     * @var AddendumPP\AddendumPP
+     */
     private $addendum;
 
+    /**
+     * @see ReflectionProperty::__construct
+     * 
+     * @param AddendumPP\AddendumPP $addendum
+     * @param mixed $class
+     * @param string $name 
+     */
     public function __construct($addendum, $class, $name) {
         parent::__construct($class, $name);
 
@@ -454,26 +603,62 @@ class ReflectionAnnotatedProperty extends ReflectionProperty {
         $this->annotations = $this->createAnnotationBuilder()->build($this);
     }
 
+    /**
+     * Checks whether this property is targetted by a type of annotation
+     * 
+     * @param string $class Tag name of the annotation
+     * @return bool
+     */
     public function hasAnnotation($class) {
         return $this->annotations->hasAnnotation($class);
     }
 
+    /**
+     * Returns all annotations, with a max of one per type
+     * 
+     * @return AddendumPP\Annotation[]
+     */
     public function getAnnotation($annotation) {
         return $this->annotations->getAnnotation($annotation);
     }
 
+    /**
+     * Returns all annotations, with a max of one per type
+     * 
+     * @return AddendumPP\Annotation[]
+     */
     public function getAnnotations() {
         return $this->annotations->getAnnotations();
     }
 
+    /**
+     * Returns all annotations, including multiple of the same type
+     * 
+     * @param string $restriction If specified, only annotations of this tag name will be returned
+     * @return AddendumPP\Annotation[]
+     */
     public function getAllAnnotations($restriction = false) {
         return $this->annotations->getAllAnnotations($restriction);
     }
     
+    /**
+     * Returns a reflection of the declaring class
+     * 
+     * @see ReflectionMethod::getDeclaringClass
+     * 
+     * @return ReflectionClass
+     */
     public function getUnannotatedDeclaringClass() {
         return parent::getDeclaringClass();
     }
 
+    /**
+     * Returns a reflection of the declaring class, with annotations
+     * 
+     * @see ReflectionMethod::getDeclaringClass
+     * 
+     * @return AddendumPP\ReflectionAnnotatedClass
+     */
     public function getDeclaringClass() {
         $class = parent::getDeclaringClass();
         return new ReflectionAnnotatedClass($this->addendum, $class->getName());
@@ -648,7 +833,7 @@ class AddendumPP {
             default:
                 throw new UnresolvedAnnotationException($className);
         }
-        $this->classnames[$className] = $result;
+        $this->cachedMappings[$className] = $result;
         return $result;
     }
     
