@@ -646,7 +646,7 @@ class AddendumPP {
                 $result = $matching[0];
                 break;
             default:
-                throw new UnmatchedAnnotationException($className);
+                throw new UnresolvedAnnotationException($className);
         }
         $this->classnames[$className] = $result;
         return $result;
