@@ -83,7 +83,7 @@ class Annotation {
      * @param mixed $target The target that this annotation is applied to
      */
     private function checkTargetConstraints($target) {
-        $reflection = new ReflectionAnnotatedClass($this->addendum, $this);
+        $reflection = new ReflectionAnnotatedClass($this->addendum, $this, 'AddendumPP\Annotation_Target');
         if ($reflection->hasAnnotation('Target')) {
             $value = $reflection->getAnnotation('Target')->value;
             $values = is_array($value) ? $value : array($value);
@@ -241,10 +241,15 @@ class AnnotationsBuilder {
      * @param Reflector $targetReflection Reflection of the object to scan for annotations
      * @return AnnotationsCollection
      */
-    public function build($targetReflection) {
+    public function build($targetReflection, $restriction = NULL) {
         $data = $this->parse($targetReflection);
         $annotations = array();
+        
         foreach ($data as $class => $parameters) {
+            $className = $this->addendum->resolveClassName($class);
+            if($restriction != NULL && !(is_subclass_of($className, $restriction) || $restriction == $className))
+                continue;
+            
             foreach ($parameters as $params) {
                 $annotation = $this->instantiateAnnotation($class, $params, $targetReflection);
                 if ($annotation !== false) {
@@ -330,11 +335,11 @@ class ReflectionAnnotatedClass extends ReflectionClass {
      * @param AddendumPP\AddendumPP $addendum
      * @param mixed $class 
      */
-    public function __construct($addendum, $class) {
+    public function __construct($addendum, $class, $restriction = NULL) {
         parent::__construct($class);
 
         $this->addendum = $addendum;
-        $this->annotations = $this->createAnnotationBuilder()->build($this);
+        $this->annotations = $this->createAnnotationBuilder()->build($this, $restriction);
     }
 
     /**
